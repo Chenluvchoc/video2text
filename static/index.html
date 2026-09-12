@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>链接转文字工作台</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card2: #21252e;
+    --border: #2c313d;
+    --text: #e8eaed;
+    --text2: #9aa0ac;
+    --accent: #4f7cff;
+    --accent2: #3a5fd9;
+    --ok: #34c77b;
+    --err: #ff5f56;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 16px 14px 40px;
+    max-width: 720px; margin: 0 auto;
+  }
+  header { display: flex; align-items: center; gap: 10px; margin: 6px 0 18px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg, #4f7cff, #8f5bff);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px; font-weight: 800;
+  }
+  header h1 { font-size: 19px; font-weight: 700; }
+  header p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  textarea {
+    width: 100%; min-height: 92px; resize: vertical;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 15px;
+    padding: 12px; line-height: 1.5; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 10px; margin-top: 12px; }
+  button {
+    flex: 1; border: none; border-radius: 10px; cursor: pointer;
+    font-size: 15px; font-weight: 600; padding: 13px 10px;
+    transition: opacity .15s, transform .05s;
+  }
+  button:active { transform: scale(.98); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-paste { background: var(--card2); color: var(--text); border: 1px solid var(--border); flex: 0 0 30%; }
+  .btn-main { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); flex: 0 0 auto; padding: 8px 14px; font-size: 13px; font-weight: 500; }
+
+  .progress-wrap { display: none; }
+  .progress-wrap.show { display: block; }
+  .stage { display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+  .stage .pct { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; background: var(--card2); border-radius: 99px; overflow: hidden; }
+  .bar > div {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #4f7cff, #8f5bff);
+    border-radius: 99px; transition: width .4s ease;
+  }
+
+  .result { display: none; }
+  .result.show { display: block; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip {
+    font-size: 12px; color: var(--text2);
+    background: var(--card2); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 99px;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .seg {
+    display: flex; gap: 10px; padding: 10px 4px;
+    border-bottom: 1px solid var(--border); font-size: 15px; line-height: 1.7;
+  }
+  .seg:last-child { border-bottom: none; }
+  .seg .t {
+    flex: 0 0 auto; font-size: 11px; color: var(--accent);
+    font-variant-numeric: tabular-nums; padding-top: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .err-box {
+    display: none; background: rgba(255,95,86,.08);
+    border: 1px solid rgba(255,95,86,.3); color: #ffb4ae;
+    border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6;
+    margin-top: 12px;
+  }
+  .err-box.show { display: block; }
+
+  .hist-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 4px; border-bottom: 1px solid var(--border);
+    font-size: 14px; cursor: pointer;
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-item .tt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-item .tm { color: var(--text2); font-size: 12px; flex-shrink: 0; }
+  .empty { color: var(--text2); font-size: 13px; text-align: center; padding: 18px 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
+    background: #2c313d; color: #fff; padding: 10px 18px; border-radius: 99px;
+    font-size: 14px; opacity: 0; pointer-events: none;
+    transition: all .25s ease; z-index: 99; border: 1px solid var(--border);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  footer { text-align: center; color: var(--text2); font-size: 11px; margin-top: 26px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">文</div>
+  <div>
+    <h1>链接转文字工作台</h1>
+    <p>粘贴分享链接 → 自动提取文案 · 本地转写 · 无时长限制</p>
+  </div>
+</header>
+
+<div class="card">
+  <textarea id="input" placeholder="把抖音/快手/小红书/B站的分享文本整段粘贴到这里，例如：&#10;8.32 a@b.c/yy 长夜将至 https://v.douyin.com/xxxxxx/ 复制此链接打开抖音…"></textarea>
+  <div class="row">
+    <button class="btn-paste" onclick="pasteFromClipboard()">📋 粘贴</button>
+    <button class="btn-main" id="btnGo" onclick="startExtract()">提取文字</button>
+  </div>
+  <div class="err-box" id="errBox"></div>
+</div>
+
+<div class="card progress-wrap" id="progressWrap">
+  <div class="stage"><span id="stageText">排队中…</span><span class="pct" id="pctText">0%</span></div>
+  <div class="bar"><div id="barFill"></div></div>
+</div>
+
+<div class="card result" id="resultCard">
+  <div class="meta" id="metaChips"></div>
+  <div class="row" style="margin:0 0 12px; flex-wrap: wrap;">
+    <button class="btn-ghost" onclick="copyAll()">复制全文</button>
+    <button class="btn-ghost" onclick="copySegments()">带时间戳复制</button>
+    <button class="btn-ghost" onclick="downloadTxt()">下载 .txt</button>
+  </div>
+  <div id="segments"></div>
+</div>
+
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+    <span style="font-size:14px; font-weight:600;">历史记录</span>
+    <span style="font-size:12px; color:var(--text2)" id="histCount"></span>
+  </div>
+  <div id="histList"><div class="empty">暂无记录</div></div>
+</div>
+
+<footer>
+  支持抖音 / 快手 / 小红书 / B站 / 微博视频等主流平台<br>
+  视频不落盘 · 音轨转写后即删 · 全程本地处理
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentJob = null;
+let pollTimer = null;
+
+const $ = id => document.getElementById(id);
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      $('input').value = text.trim();
+      toast('已粘贴');
+    } else {
+      toast('剪贴板是空的');
+    }
+  } catch (e) {
+    toast('浏览器拒绝了剪贴板权限，请长按输入框手动粘贴');
+  }
+}
+
+function startExtract() {
+  const text = $('input').value.trim();
+  if (!text) { toast('先粘贴点内容'); return; }
+
+  $('btnGo').disabled = true;
+  $('errBox').classList.remove('show');
+  $('resultCard').classList.remove('show');
+  $('progressWrap').classList.add('show');
+  setProgress(0, '提交任务…');
+
+  fetch('/api/extract', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.job_id) throw new Error(d.detail || '创建任务失败');
+    currentJob = d.job_id;
+    pollStatus();
+  })
+  .catch(e => {
+    fail('请求失败：' + e.message);
+  });
+}
+
+function pollStatus() {
+  pollTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/status/' + currentJob);
+      const d = await r.json();
+      if (d.status === 'done') {
+        renderResult(d);
+        loadHistory();
+        return;
+      }
+      if (d.status === 'error') {
+        fail(d.error || '未知错误');
+        return;
+      }
+      setProgress(d.progress || 0, d.stage || '处理中…');
+      pollStatus();
+    } catch (e) {
+      pollStatus();
+    }
+  }, 1200);
+}
+
+function setProgress(p, stage) {
+  $('barFill').style.width = p + '%';
+  $('pctText').textContent = p + '%';
+  $('stageText').textContent = stage;
+}
+
+function fail(msg) {
+  clearTimeout(pollTimer);
+  $('btnGo').disabled = false;
+  $('progressWrap').classList.remove('show');
+  const box = $('errBox');
+  box.textContent = '❌ ' + msg;
+  box.classList.add('show');
+}
+
+function fmtDur(s) {
+  if (!s) return '';
+  s = Math.round(s);
+  const m = Math.floor(s / 60), sec = s % 60;
+  return m > 0 ? m + '分' + (sec < 10 ? '0' : '') + sec + '秒' : sec + '秒';
+}
+
+function fmtTs(t) {
+  const m = Math.floor(t / 60), s = Math.floor(t % 60);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function renderResult(d) {
+  clearTimeout(pollTimer);
+  $('btnGo').disabled = false;
+  $('progressWrap').classList.remove('show');
+
+  const chips = [];
+  if (d.title) chips.push('<span class="chip">📄 <b></b></span>'.replace('<b></b>', '<b>' + esc(d.title.slice(0, 30)) + '</b>'));
+  if (d.uploader) chips.push('<span class="chip">👤 ' + esc(d.uploader.slice(0, 16)) + '</span>');
+  if (d.duration) chips.push('<span class="chip">⏱ ' + fmtDur(d.duration) + '</span>');
+  chips.push('<span class="chip">📝 ' + d.segments.length + ' 段</span>');
+  $('metaChips').innerHTML = chips.join('');
+
+  $('segments').innerHTML = d.segments.map(s =>
+    '<div class="seg"><span class="t">' + fmtTs(s.start) + '</span><span>' + esc(s.text) + '</span></div>'
+  ).join('');
+
+  $('resultCard').classList.add('show');
+  window._lastResult = d;
+  $('resultCard').scrollIntoView({behavior: 'smooth'});
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function copyText(t, okMsg) {
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    toast(okMsg);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(() => toast(okMsg)).catch(fallback);
+  } else fallback();
+}
+
+function copyAll() {
+  copyText(window._lastResult.full_text, '全文已复制');
+}
+
+function copySegments() {
+  const d = window._lastResult;
+  copyText(d.segments.map(s => '[' + fmtTs(s.start) + '] ' + s.text).join('\n'), '带时间戳文本已复制');
+}
+
+function downloadTxt() {
+  const d = window._lastResult;
+  const head = (d.title ? d.title + '\n' : '') + (d.uploader ? '作者：' + d.uploader + '  ' : '') + (d.duration ? '时长：' + fmtDur(d.duration) : '') + '\n' + '─'.repeat(24) + '\n\n';
+  const body = d.segments.map(s => '[' + fmtTs(s.start) + '] ' + s.text).join('\n');
+  const blob = new Blob([head + body], {type: 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (d.title || '转写结果').slice(0, 40).replace(/[\\/:*?"<>|]/g, '') + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/history');
+    const d = await r.json();
+    const list = $('histList');
+    if (!d.items || !d.items.length) {
+      list.innerHTML = '<div class="empty">暂无记录</div>';
+      $('histCount').textContent = '';
+      return;
+    }
+    $('histCount').textContent = d.items.length + ' 条';
+    list.innerHTML = d.items.map(i =>
+      '<div class="hist-item" onclick="viewHist(\'' + i.job_id + '\')">' +
+      '<span class="tt">' + esc(i.title || '(无标题)') + '</span>' +
+      '<span class="tm">' + fmtDur(i.duration) + ' · ' + i.time.slice(5, 16) + '</span></div>'
+    ).join('');
+  } catch (e) {}
+}
+
+async function viewHist(jobId) {
+  try {
+    const r = await fetch('/api/status/' + jobId);
+    const d = await r.json();
+    if (d.status === 'done' && d.segments) {
+      renderResult(d);
+    } else {
+      toast('记录读取失败');
+    }
+  } catch (e) { toast('记录读取失败'); }
+}
+
+loadHistory();
+</script>
+</body>
+</html>

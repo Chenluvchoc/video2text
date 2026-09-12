@@ -1,0 +1,10 @@
+# 运行时生成
+cookies/
+history/
+jobs/
+__pycache__/
+*.pyc
+venv/
+# 模型文件（首次运行自动下载，不入库）
+models/faster-whisper-*/
+models/*.bin
