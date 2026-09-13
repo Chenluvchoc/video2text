@@ -25,7 +25,7 @@
     min-height: 100vh; padding: 16px 14px 40px;
     max-width: 720px; margin: 0 auto;
   }
-  header { display: flex; align-items: center; gap: 10px; margin: 6px 0 18px; }
+  header { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; }
   .logo {
     width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
     background: linear-gradient(135deg, #4f7cff, #8f5bff);
@@ -34,6 +34,17 @@
   }
   header h1 { font-size: 19px; font-weight: 700; }
   header p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .tabs {
+    display: flex; background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px; margin-bottom: 14px; gap: 4px;
+  }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 6px; font-size: 14px; font-weight: 600;
+    color: var(--text2); border-radius: 9px; cursor: pointer; transition: all .15s;
+    user-select: none;
+  }
+  .tab.on { background: var(--accent); color: #fff; }
 
   .card {
     background: var(--card); border: 1px solid var(--border);
@@ -57,6 +68,23 @@
   .btn-paste { background: var(--card2); color: var(--text); border: 1px solid var(--border); flex: 0 0 30%; }
   .btn-main { background: var(--accent); color: #fff; }
   .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); flex: 0 0 auto; padding: 8px 14px; font-size: 13px; font-weight: 500; }
+  select {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-size: 14px; padding: 0 10px; outline: none; flex: 0 0 34%;
+  }
+  .hint { font-size: 12px; color: var(--text2); margin-top: 10px; line-height: 1.7; }
+  .hint code {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 5px; font-size: 11px;
+  }
+  .filebox {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card2); border: 1px dashed var(--border);
+    border-radius: 10px; padding: 18px 14px; cursor: pointer;
+    font-size: 14px; color: var(--text2); transition: border-color .15s;
+  }
+  .filebox:active, .filebox:hover { border-color: var(--accent); }
+  .filebox span:last-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .progress-wrap { display: none; }
   .progress-wrap.show { display: block; }
@@ -92,7 +120,7 @@
     display: none; background: rgba(255,95,86,.08);
     border: 1px solid rgba(255,95,86,.3); color: #ffb4ae;
     border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.6;
-    margin-top: 12px;
+    margin-top: 12px; word-break: break-all;
   }
   .err-box.show { display: block; }
 
@@ -106,12 +134,33 @@
   .hist-item .tm { color: var(--text2); font-size: 12px; flex-shrink: 0; }
   .empty { color: var(--text2); font-size: 13px; text-align: center; padding: 18px 0; }
 
+  .bitem {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 4px; border-bottom: 1px solid var(--border);
+    font-size: 14px; cursor: pointer;
+  }
+  .bitem:last-child { border-bottom: none; }
+  .bitem .bicon { flex-shrink: 0; width: 20px; text-align: center; font-size: 14px; }
+  .bitem .tt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bitem .tm { color: var(--text2); font-size: 12px; flex-shrink: 0; }
+  .bitem.st-pending { opacity: .5; }
+  .bitem.st-running .tt { color: var(--accent); }
+  .bitem.st-running .bicon { animation: spin 1.1s linear infinite; display: inline-block; }
+  .bitem.st-error .tt { color: var(--err); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .batch-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px; font-size: 13px; color: var(--text2);
+  }
+  .batch-head b { color: var(--text); }
+
   .toast {
     position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
     background: #2c313d; color: #fff; padding: 10px 18px; border-radius: 99px;
     font-size: 14px; opacity: 0; pointer-events: none;
     transition: all .25s ease; z-index: 99; border: 1px solid var(--border);
-    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4); max-width: 86vw;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   footer { text-align: center; color: var(--text2); font-size: 11px; margin-top: 26px; line-height: 1.8; }
@@ -127,26 +176,101 @@
   </div>
 </header>
 
-<div class="card">
-  <textarea id="input" placeholder="把抖音/快手/小红书/B站的分享文本整段粘贴到这里，例如：&#10;8.32 a@b.c/yy 长夜将至 https://v.douyin.com/xxxxxx/ 复制此链接打开抖音…"></textarea>
-  <div class="row">
-    <button class="btn-paste" onclick="pasteFromClipboard()">📋 粘贴</button>
-    <button class="btn-main" id="btnGo" onclick="startExtract()">提取文字</button>
+<div class="tabs">
+  <div class="tab on" id="tabBtnSingle" onclick="switchTab('single')">🔗 单链接</div>
+  <div class="tab" id="tabBtnBatch" onclick="switchTab('batch')">⭐ B站收藏夹</div>
+  <div class="tab" id="tabBtnWord" onclick="switchTab('word')">📄 Word 文案库</div>
+</div>
+
+<!-- ======================= Tab 1: 单链接 ======================= -->
+<div id="tabSingle">
+  <div class="card">
+    <textarea id="input" placeholder="把抖音/快手/小红书/B站的分享文本整段粘贴到这里，例如：&#10;8.32 a@b.c/yy 长夜将至 https://v.douyin.com/xxxxxx/ 复制此链接打开抖音…"></textarea>
+    <div class="row">
+      <button class="btn-paste" onclick="pasteFromClipboard()">📋 粘贴</button>
+      <button class="btn-main" id="btnGo" onclick="startExtract()">提取文字</button>
+    </div>
+    <div class="err-box" id="errBox"></div>
   </div>
-  <div class="err-box" id="errBox"></div>
+
+  <div class="card progress-wrap" id="progressWrap">
+    <div class="stage"><span id="stageText">排队中…</span><span class="pct" id="pctText">0%</span></div>
+    <div class="bar"><div id="barFill"></div></div>
+  </div>
 </div>
 
-<div class="card progress-wrap" id="progressWrap">
-  <div class="stage"><span id="stageText">排队中…</span><span class="pct" id="pctText">0%</span></div>
-  <div class="bar"><div id="barFill"></div></div>
+<!-- ======================= Tab 2: 收藏夹批量 ======================= -->
+<div id="tabBatch" style="display:none">
+  <div class="card">
+    <textarea id="batchInput" style="min-height:76px" placeholder="粘贴 B 站收藏夹链接，例如：&#10;https://space.bilibili.com/123456/favlist?fid=987654"></textarea>
+    <div class="row">
+      <select id="batchMax">
+        <option value="5">前 5 条</option>
+        <option value="10">前 10 条</option>
+        <option value="20">前 20 条</option>
+        <option value="30" selected>前 30 条</option>
+        <option value="50">前 50 条</option>
+      </select>
+      <button class="btn-paste" onclick="pasteToBatch()">📋 粘贴</button>
+      <button class="btn-main" id="btnBatch" onclick="startBatch()">开始批量转写</button>
+    </div>
+    <div class="hint">
+      收藏夹入口：B 站 App「我的」→ 收藏 → 打开收藏夹 → 右上角分享 → 复制链接。<br>
+      仅支持<b>公开</b>收藏夹；每条视频串行转写，请耐心等待。标题含 <b>【P1】</b> 的多 P 视频取第一 P。
+    </div>
+    <div class="err-box" id="batchErrBox"></div>
+  </div>
+
+  <div class="card progress-wrap" id="batchProgressWrap">
+    <div class="batch-head">
+      <span id="batchStage">排队中…</span>
+      <span><b id="batchDone">0</b> / <span id="batchTotal">0</span> 条 · <b id="batchPct" style="color:var(--accent)">0%</b></span>
+    </div>
+    <div class="bar"><div id="batchBarFill"></div></div>
+    <div id="batchList" style="margin-top:6px"></div>
+  </div>
 </div>
 
+<!-- ======================= Tab 3: Word 文案库 ======================= -->
+<div id="tabWord" style="display:none">
+  <div class="card">
+    <label class="filebox" for="wordFile">
+      <span id="fileIcon">📎</span>
+      <span id="fileLabel">点击选择领导发来的 Word 文档（.docx）</span>
+    </label>
+    <input type="file" id="wordFile" accept=".docx" style="display:none" onchange="onFilePicked()">
+    <div class="row">
+      <button class="btn-main" id="btnWord" onclick="startWordBatch()" disabled>识别链接并批量转写</button>
+    </div>
+    <div class="hint">
+      文档里的视频链接会被自动识别——正文里粘贴的链接文本、超链接按钮两种形式都支持，
+      识别后逐条转写，最终生成一份<b>带时间戳的 Word 文案库</b>，一键下载。<br>
+      支持抖音 / B站 / 快手 / 小红书等全平台链接，单次最多 100 条。
+    </div>
+    <div class="err-box" id="wordErrBox"></div>
+  </div>
+
+  <div class="card progress-wrap" id="wordProgressWrap">
+    <div class="batch-head">
+      <span id="wordStage">排队中…</span>
+      <span><b id="wordDone">0</b> / <span id="wordTotal">0</span> 条 · <b id="wordPct" style="color:var(--accent)">0%</b></span>
+    </div>
+    <div class="bar"><div id="wordBarFill"></div></div>
+    <div id="wordList" style="margin-top:6px"></div>
+    <div class="row" id="wordDoneRow" style="display:none; margin-top:14px;">
+      <button class="btn-main" onclick="downloadWordDocx()">📥 下载 Word 文案库</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= 共享结果区 ======================= -->
 <div class="card result" id="resultCard">
   <div class="meta" id="metaChips"></div>
   <div class="row" style="margin:0 0 12px; flex-wrap: wrap;">
     <button class="btn-ghost" onclick="copyAll()">复制全文</button>
     <button class="btn-ghost" onclick="copySegments()">带时间戳复制</button>
     <button class="btn-ghost" onclick="downloadTxt()">下载 .txt</button>
+    <button class="btn-ghost" onclick="downloadSrt()">下载 .srt 字幕</button>
   </div>
   <div id="segments"></div>
 </div>
@@ -169,6 +293,8 @@
 <script>
 let currentJob = null;
 let pollTimer = null;
+let currentBatch = null;
+let batchTimer = null;
 
 const $ = id => document.getElementById(id);
 
@@ -176,23 +302,39 @@ function toast(msg) {
   const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1800);
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function switchTab(t) {
+  for (const x of ['single', 'batch', 'word']) {
+    const cap = x[0].toUpperCase() + x.slice(1);
+    $('tab' + cap).style.display = x === t ? '' : 'none';
+    $('tabBtn' + cap).classList.toggle('on', x === t);
+  }
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 async function pasteFromClipboard() {
   try {
     const text = await navigator.clipboard.readText();
-    if (text) {
-      $('input').value = text.trim();
-      toast('已粘贴');
-    } else {
-      toast('剪贴板是空的');
-    }
+    if (text) { $('input').value = text.trim(); toast('已粘贴'); }
+    else toast('剪贴板是空的');
   } catch (e) {
     toast('浏览器拒绝了剪贴板权限，请长按输入框手动粘贴');
   }
 }
 
+async function pasteToBatch() {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) { $('batchInput').value = text.trim(); toast('已粘贴'); }
+    else toast('剪贴板是空的');
+  } catch (e) {
+    toast('浏览器拒绝了剪贴板权限，请长按输入框手动粘贴');
+  }
+}
+
+/* ---------------- 单链接 ---------------- */
 function startExtract() {
   const text = $('input').value.trim();
   if (!text) { toast('先粘贴点内容'); return; }
@@ -214,9 +356,7 @@ function startExtract() {
     currentJob = d.job_id;
     pollStatus();
   })
-  .catch(e => {
-    fail('请求失败：' + e.message);
-  });
+  .catch(e => fail('请求失败：' + e.message));
 }
 
 function pollStatus() {
@@ -224,20 +364,11 @@ function pollStatus() {
     try {
       const r = await fetch('/api/status/' + currentJob);
       const d = await r.json();
-      if (d.status === 'done') {
-        renderResult(d);
-        loadHistory();
-        return;
-      }
-      if (d.status === 'error') {
-        fail(d.error || '未知错误');
-        return;
-      }
+      if (d.status === 'done') { renderResult(d); loadHistory(); return; }
+      if (d.status === 'error') { fail(d.error || '未知错误'); return; }
       setProgress(d.progress || 0, d.stage || '处理中…');
       pollStatus();
-    } catch (e) {
-      pollStatus();
-    }
+    } catch (e) { pollStatus(); }
   }, 1200);
 }
 
@@ -256,6 +387,170 @@ function fail(msg) {
   box.classList.add('show');
 }
 
+/* ---------------- 收藏夹批量 / Word 批量（共用轮询） ---------------- */
+function startBatch() {
+  const text = $('batchInput').value.trim();
+  if (!text) { toast('先粘贴收藏夹链接'); return; }
+
+  $('btnBatch').disabled = true;
+  $('batchErrBox').classList.remove('show');
+  $('batchProgressWrap').classList.add('show');
+  $('batchList').innerHTML = '';
+  $('batchBarFill').style.width = '0%';
+  $('batchStage').textContent = '提交任务…';
+  $('batchDone').textContent = '0';
+  $('batchTotal').textContent = '?';
+
+  fetch('/api/batch', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text, max_items: parseInt($('batchMax').value, 10) || 30})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.batch_id) throw new Error(d.detail || '创建任务失败');
+    currentBatch = d.batch_id;
+    batchMode = 'fav';
+    pollBatch();
+  })
+  .catch(e => batchFail('fav', '请求失败：' + e.message));
+}
+
+let batchMode = 'fav';   // 'fav' | 'word'
+
+function pollBatch() {
+  batchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/batch/' + currentBatch);
+      const d = await r.json();
+      if (d.error) { batchFail(batchMode, d.error); return; }
+      renderBatch(d, batchMode);
+      if (d.status === 'done') {
+        if (batchMode === 'word') {
+          $('btnWord').disabled = false;
+          if (d.docx_ready) {
+            $('wordDoneRow').style.display = '';
+            toast('Word 文案库已生成，可以下载了 ✅');
+          } else {
+            batchFail('word', d.error || 'Word 生成失败，但已完成的转写仍可逐条点击查看');
+          }
+        } else {
+          $('btnBatch').disabled = false;
+          const ok = d.done || 0, total = d.items.length;
+          toast(ok === total ? `收藏夹转写完成：${ok}/${total} 条 ✅` : `完成：成功 ${ok} 条，失败 ${total - ok} 条`);
+        }
+        loadHistory();
+        return;
+      }
+      if (d.status === 'error') { batchFail(batchMode, d.error || '批量任务失败'); return; }
+      pollBatch();
+    } catch (e) { pollBatch(); }
+  }, 1600);
+}
+
+const BATCH_ICON = {pending: '⏳', running: '🔄', done: '✅', error: '❌'};
+
+function shortUrl(u) {
+  try { return new URL(u).hostname.replace('www.', ''); }
+  catch (e) { return (u || '').slice(0, 20); }
+}
+
+function renderBatch(d, mode) {
+  const p = mode === 'word' ? 'word' : 'batch';
+  $(p + 'BarFill').style.width = (d.progress || 0) + '%';
+  $(p + 'Pct').textContent = (d.progress || 0) + '%';
+  $(p + 'Stage').textContent = d.stage || '处理中…';
+  $(p + 'Done').textContent = d.done || 0;
+  $(p + 'Total').textContent = d.total || (d.items ? d.items.length : 0);
+
+  $(p + 'List').innerHTML = (d.items || []).map((it, i) => {
+    const label = it.title || shortUrl(it.url);
+    return '<div class="bitem st-' + it.status + '" onclick="viewBatchItem(' + i + ')">' +
+      '<span class="bicon">' + (BATCH_ICON[it.status] || '·') + '</span>' +
+      '<span class="tt">' + esc(label || '(无标题)') + '</span>' +
+      '<span class="tm">' + fmtDur(it.duration) + '</span></div>';
+  }).join('');
+}
+
+function batchFail(mode, msg) {
+  clearTimeout(batchTimer);
+  const p = mode === 'word' ? 'word' : 'batch';
+  if (mode === 'word') $('btnWord').disabled = false;
+  else $('btnBatch').disabled = false;
+  $(p + 'ProgressWrap').classList.remove('show');
+  const box = $(p === 'word' ? 'wordErrBox' : 'batchErrBox');
+  box.textContent = '❌ ' + msg;
+  box.classList.add('show');
+}
+
+/* ---------------- Word 文案库 ---------------- */
+function onFilePicked() {
+  const f = $('wordFile').files[0];
+  if (f) {
+    $('fileLabel').textContent = f.name + '（' + (f.size / 1024).toFixed(0) + ' KB）';
+    $('fileIcon').textContent = '📄';
+    $('btnWord').disabled = false;
+  } else {
+    $('fileLabel').textContent = '点击选择领导发来的 Word 文档（.docx）';
+    $('fileIcon').textContent = '📎';
+    $('btnWord').disabled = true;
+  }
+}
+
+async function startWordBatch() {
+  const f = $('wordFile').files[0];
+  if (!f) { toast('先选择 Word 文档'); return; }
+
+  $('btnWord').disabled = true;
+  $('wordErrBox').classList.remove('show');
+  $('wordDoneRow').style.display = 'none';
+  $('wordProgressWrap').classList.add('show');
+  $('wordList').innerHTML = '';
+  $('wordBarFill').style.width = '0%';
+  $('wordStage').textContent = '上传并识别链接…';
+  $('wordDone').textContent = '0';
+  $('wordTotal').textContent = '?';
+
+  const fd = new FormData();
+  fd.append('file', f);
+  try {
+    const r = await fetch('/api/wordbatch', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!d.batch_id) throw new Error(d.error || d.detail || '上传失败');
+    currentBatch = d.batch_id;
+    batchMode = 'word';
+    toast(`已识别 ${d.count} 个链接，开始批量转写`);
+    pollBatch();
+  } catch (e) {
+    batchFail('word', '上传失败：' + e.message);
+  }
+}
+
+function downloadWordDocx() {
+  const a = document.createElement('a');
+  a.href = '/api/wordbatch/' + currentBatch + '/docx';
+  a.download = '';
+  a.click();
+  toast('文案库已开始下载');
+}
+
+async function viewBatchItem(idx) {
+  try {
+    const r = await fetch(`/api/batch/${currentBatch}/item/${idx}`);
+    const it = await r.json();
+    if (it.error && it.status === 'error') { toast('这条失败了：' + (it.error || '未知原因')); return; }
+    if (it.status !== 'done') { toast('这条还没转写完，稍后再点'); return; }
+    switchTab('single');
+    renderResult({
+      id: it.job_id, job_id: it.job_id,
+      title: it.title, uploader: it.upper,
+      duration: it.duration,
+      segments: it.segments, full_text: it.full_text
+    });
+  } catch (e) { toast('读取失败'); }
+}
+
+/* ---------------- 结果渲染（单链接 / 批量条目共用） ---------------- */
 function fmtDur(s) {
   if (!s) return '';
   s = Math.round(s);
@@ -274,7 +569,7 @@ function renderResult(d) {
   $('progressWrap').classList.remove('show');
 
   const chips = [];
-  if (d.title) chips.push('<span class="chip">📄 <b></b></span>'.replace('<b></b>', '<b>' + esc(d.title.slice(0, 30)) + '</b>'));
+  if (d.title) chips.push('<span class="chip">📄 <b>' + esc(d.title.slice(0, 30)) + '</b></span>');
   if (d.uploader) chips.push('<span class="chip">👤 ' + esc(d.uploader.slice(0, 16)) + '</span>');
   if (d.duration) chips.push('<span class="chip">⏱ ' + fmtDur(d.duration) + '</span>');
   chips.push('<span class="chip">📝 ' + d.segments.length + ' 段</span>');
@@ -308,16 +603,19 @@ function copyText(t, okMsg) {
 }
 
 function copyAll() {
+  if (!window._lastResult) return;
   copyText(window._lastResult.full_text, '全文已复制');
 }
 
 function copySegments() {
   const d = window._lastResult;
+  if (!d) return;
   copyText(d.segments.map(s => '[' + fmtTs(s.start) + '] ' + s.text).join('\n'), '带时间戳文本已复制');
 }
 
 function downloadTxt() {
   const d = window._lastResult;
+  if (!d) return;
   const head = (d.title ? d.title + '\n' : '') + (d.uploader ? '作者：' + d.uploader + '  ' : '') + (d.duration ? '时长：' + fmtDur(d.duration) : '') + '\n' + '─'.repeat(24) + '\n\n';
   const body = d.segments.map(s => '[' + fmtTs(s.start) + '] ' + s.text).join('\n');
   const blob = new Blob([head + body], {type: 'text/plain;charset=utf-8'});
@@ -328,6 +626,18 @@ function downloadTxt() {
   URL.revokeObjectURL(a.href);
 }
 
+function downloadSrt() {
+  const d = window._lastResult;
+  const jid = d && (d.job_id || d.id);
+  if (!jid) { toast('当前结果没有任务 ID，无法导出 SRT'); return; }
+  const a = document.createElement('a');
+  a.href = '/api/srt/' + jid;
+  a.download = '';
+  a.click();
+  toast('SRT 字幕已开始下载');
+}
+
+/* ---------------- 历史 ---------------- */
 async function loadHistory() {
   try {
     const r = await fetch('/api/history');
@@ -352,6 +662,7 @@ async function viewHist(jobId) {
     const r = await fetch('/api/status/' + jobId);
     const d = await r.json();
     if (d.status === 'done' && d.segments) {
+      switchTab('single');
       renderResult(d);
     } else {
       toast('记录读取失败');

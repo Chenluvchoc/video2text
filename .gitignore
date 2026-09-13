@@ -8,3 +8,7 @@ venv/
 # 模型文件（首次运行自动下载，不入库）
 models/faster-whisper-*/
 models/*.bin
+
+# 导出的文案库成品（运行时生成）
+exports/
+models/faster-whisper-medium

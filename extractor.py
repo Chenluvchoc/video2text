@@ -19,7 +19,11 @@ import requests
 
 log = logging.getLogger("extractor")
 
-URL_RE = re.compile(r'https?://[^\s，,。；;！!？?"\'（）()\[\]【】<>]+')
+# 排除：空白、中西文标点、CJK 汉字（\u4e00-\u9fff）、CJK 标点（\u3000-\u303f）、全角符号（\uff01-\uff5e）
+# —— 分享文本里链接后面常紧跟中文（"…/xxx复制此链接"），必须把汉字当边界
+URL_RE = re.compile(
+    r'https?://[^\s，,。；;！!？?"\'（）()\[\]【】<>'
+    r'\u4e00-\u9fff\u3000-\u303f\uff01-\uff5e]+')
 
 DOUYIN_HOSTS = ("douyin.com", "iesdouyin.com")
 BILI_HOSTS = ("bilibili.com", "b23.tv", "biliapi.net")
@@ -37,6 +41,59 @@ def extract_url(text: str) -> str:
         return ""
     u = m.group(0)
     return u if u.endswith("/") else u + "/"
+
+
+def extract_urls(text: str) -> list:
+    """从文本中提取所有 URL（保序去重，链接末尾统一补 /）"""
+    if not text:
+        return []
+    seen, out = set(), []
+    for m in URL_RE.finditer(text):
+        u = m.group(0)
+        if not u.endswith("/"):
+            u += "/"
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+# ------------------------------------------------ Word 文档链接提取
+_WT_RE = re.compile(r'<w:t[^>]*>([^<]*)</w:t>')
+
+
+def docx_extract_urls(path: str) -> list:
+    """
+    从 .docx 提取所有链接（保序去重）。
+
+    覆盖两种形态：
+      1. 正文/表格里的纯文本 URL（拼接所有 <w:t> 后正则提取）
+      2. 超链接按钮（目标 URL 存在 word/_rels/document.xml.rels 的 External Target 里）
+    """
+    import zipfile
+    from xml.sax.saxutils import unescape
+
+    urls = []
+    with zipfile.ZipFile(path) as z:
+        # 1) 正文 + 表格中的纯文本
+        xml = z.read("word/document.xml").decode("utf-8", "ignore")
+        text = unescape("".join(_WT_RE.findall(xml)))
+        urls += URL_RE.findall(text)
+        # 2) 超链接形式的 target
+        try:
+            rels = z.read("word/_rels/document.xml.rels").decode("utf-8", "ignore")
+            urls += re.findall(r'Target="(http[^"]+)"', rels)
+        except KeyError:
+            pass
+
+    seen, out = set(), []
+    for u in urls:
+        u = u if u.endswith("/") else u + "/"
+        # 跳过 Word 自动识别产生的锚点/书签链接
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
 
 
 def _is_bili(url: str) -> bool:
@@ -99,6 +156,73 @@ def bili_probe(url: str) -> dict:
             "uploader": (data.get("owner") or {}).get("name", ""),
             "duration": data.get("duration", 0), "id": bvid,
             "webpage_url": f"https://www.bilibili.com/video/{bvid}"}
+
+
+# ------------------------------------------------ B 站收藏夹
+_FAV_FID_RE = re.compile(r'fid=(\d+)')
+
+
+def parse_favlist_url(text: str):
+    """
+    从文本/URL 中解析收藏夹信息。
+    支持格式:
+      - https://space.bilibili.com/{mid}/favlist?fid=xxx
+      - https://www.bilibili.com/medialist/play/ml{fid} （稍后跳转解析）
+      - 纯数字 fid
+    返回 (fid, mid) ；解析不到返回 (None, None)
+    """
+    url = extract_url(text) or ""
+    if "b23.tv" in url:
+        url = _resolve_b23(url)
+    m = _FAV_FID_RE.search(url)
+    fid = m.group(1) if m else (text.strip() if text.strip().isdigit() else None)
+    mid = None
+    m2 = re.search(r'space\.bilibili\.com/(\d+)', url)
+    if m2:
+        mid = m2.group(1)
+    if not fid and "ml" in url:
+        m3 = re.search(r'ml(\d+)', url)
+        if m3:
+            fid = m3.group(1)
+    return fid, mid
+
+
+def favlist_items(fid: str, max_items: int = 50) -> list:
+    """
+    拉取公开收藏夹的视频列表（分页）。
+    返回 [{bvid, title, duration, upper}]。私密的收藏夹会抛异常。
+    """
+    ck = _bili_get_cookie()
+    headers = _bili_api_headers(ck)
+    items, pn = [], 1
+    while len(items) < max_items:
+        r = requests.get(
+            "https://api.bilibili.com/x/v3/fav/resource/list",
+            params={"media_id": fid, "pn": pn, "ps": 20, "keyword": "",
+                    "order": "mtime", "type": 0, "tid": 0, "platform": "web"},
+            headers=headers, timeout=15)
+        j = r.json()
+        code = j.get("code", -1)
+        if code == -403:
+            raise ValueError("该收藏夹是私密的，仅支持公开收藏夹")
+        if code != 0:
+            raise ValueError(f"B 站收藏夹接口返回错误 code={code} {j.get('message','')}")
+        data = j.get("data") or {}
+        medias = data.get("medias") or []
+        if not medias:
+            break
+        for mv in medias:
+            items.append({
+                "bvid": mv.get("bv_id") or mv.get("bvid") or "",
+                "title": mv.get("title") or "",
+                "duration": mv.get("duration") or 0,
+                "upper": (mv.get("upper") or {}).get("name", ""),
+            })
+        total = data.get("info", {}).get("media_count", 0)
+        if len(items) >= total:
+            break
+        pn += 1
+    return items[:max_items]
 
 
 def bili_extract(url: str, workdir: str, progress_cb=None) -> tuple:

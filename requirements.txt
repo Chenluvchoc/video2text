@@ -3,6 +3,8 @@ uvicorn>=0.29
 yt-dlp>=2024.4.9
 faster-whisper>=1.0.0
 pydantic>=2.0
+python-multipart>=0.0.9
+python-docx>=1.1.0
 # 可选：用于自动刷新抖音/B站 cookies（推荐安装）
 # 安装后还需执行: playwright install chromium
 playwright>=1.44
